@@ -1,47 +1,71 @@
 # Source: https://stackoverflow.com/questions/52146562/python-tkinter-paint-how-to-paint-smoothly-and-save-images-with-a-different
+
+# GUI stuff
 from tkinter import *
+
+# Pillow limage lib stuff
 import PIL
 from PIL import Image, ImageDraw
 
 
-def save():
-    global image_number
-    filename = f'image_{image_number}.png'   # image_number increments by 1 at every save
-    image1.save(filename)
-    image_number += 1
+from abc import ABC, abstractmethod
+
+import PIL.Image
+
+class DrawingInput(ABC):
+    @abstractmethod
+    def active_paint(self,event):
+        pass
+
+    @abstractmethod
+    def paint(self,event):
+        pass
 
 
-def activate_paint(e):
-    global lastx, lasty
-    cv.bind('<B1-Motion>', paint)
-    lastx, lasty = e.x, e.y
+class MouseDrawingCanvas(DrawingInput):
+    def __init__(self, width=640, height=480):
+        self.previous_x = None
+        self.previous_y = None
+        self.image_number = 0
+        self.image = PIL.Image.new('RGB', (width, height), 'white')
+        self.root = Tk()
+        self.canvas = Canvas(self.root, width=width, height=height, bg="white")
+        self.canvas.bind('<1>', self.active_paint)
+        self.draw = ImageDraw.Draw(self.image)
+        self.canvas.pack(expand=YES, fill=BOTH)
+        self.btn_save = Button(text="save", command=self.save)
+        self.btn_save.pack()
 
 
-def paint(e):
-    global lastx, lasty
-    x, y = e.x, e.y
-    cv.create_line((lastx, lasty, x, y), width=1)
-    #  --- PIL
-    draw.line((lastx, lasty, x, y), fill='black', width=1)
-    lastx, lasty = x, y
+    def active_paint(self, event):
+        self.previous_x = event.x
+        self.previous_y = event.y
+        self.canvas.bind('<B1-Motion>', self.paint)
+
+    def paint(self, event):
+        x, y = event.x, event.y
+        self.canvas.create_line((self.previous_x, self.previous_y, x, y), width=1)
+        self.draw.line((self.previous_x, self.previous_y, x, y), fill='black', width=1)
+        self.previous_x, self.previous_y = x, y
 
 
-root = Tk()
 
-lastx, lasty = None, None
-image_number = 0
-
-cv = Canvas(root, width=640, height=480, bg='white')
-# --- PIL
-image1 = PIL.Image.new('RGB', (640, 480), 'white')
-draw = ImageDraw.Draw(image1)
-
-cv.bind('<1>', activate_paint)
-cv.pack(expand=YES, fill=BOTH)
-
-btn_save = Button(text="save", command=save)
-btn_save.pack()
-
-root.mainloop()
+    def run_loop(self):
+        self.root.mainloop()
 
 
+    def save(self):
+        filename = f'image_{self.image_number}.png'
+        self.image.save(filename)
+        self.image_number += 1
+
+
+
+
+
+
+
+
+if __name__ == '__main__':
+    drawing_app = MouseDrawingCanvas()
+    drawing_app.run_loop()
